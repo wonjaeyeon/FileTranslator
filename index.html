@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>파일 번역기 - File Translator</title>
+    <link rel="stylesheet" href="style.css?v=3">
+    <script>
+        function showExcelTranslator() {
+            document.getElementById('fileTypeSelection').classList.add('hidden');
+            document.getElementById('excelTranslator').classList.remove('hidden');
+        }
+        function showFileTypeSelection() {
+            document.getElementById('excelTranslator').classList.add('hidden');
+            document.getElementById('fileTypeSelection').classList.remove('hidden');
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>파일 번역기</h1>
+            <p>한국어 ↔ 중국어 번역 도구</p>
+        </header>
+
+        <main>
+            <div class="file-type-selection" id="fileTypeSelection">
+                <h2>번역할 파일 유형을 선택하세요</h2>
+                <div class="file-type-grid">
+                    <div class="file-type-card" data-type="excel" onclick="showExcelTranslator();">
+                        <img src="icons/excel_new.png" alt="Excel" class="file-icon">
+                        <h3>Excel</h3>
+                        <p class="file-ext">.xlsx, .xls</p>
+                    </div>
+                    <div class="file-type-card disabled" data-type="word">
+                        <img src="icons/word_new.png" alt="Word" class="file-icon">
+                        <h3>Word</h3>
+                        <p class="file-ext">.docx, .doc</p>
+                    </div>
+                    <div class="file-type-card disabled" data-type="pdf">
+                        <img src="icons/pdf_new.png" alt="PDF" class="file-icon">
+                        <h3>PDF</h3>
+                        <p class="file-ext">.pdf</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="excel-translator hidden" id="excelTranslator">
+                <div class="translator-header">
+                    <button id="backBtn" class="back-btn" onclick="showFileTypeSelection()">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M12.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L9.414 10l3.293 3.293a1 1 0 010 1.414z"/>
+                        </svg>
+                    </button>
+                    <h2>Excel 파일 번역기</h2>
+                </div>
+
+                <div class="translation-options">
+                    <div class="option-card">
+                        <h3>번역 설정</h3>
+                        <div class="setting-group">
+                            <label>
+                                <input type="radio" name="direction" value="ko-to-zh" checked>
+                                한국어 → 중국어
+                            </label>
+                            <label>
+                                <input type="radio" name="direction" value="zh-to-ko">
+                                중국어 → 한국어
+                            </label>
+                        </div>
+                        <div class="setting-group">
+                            <label>
+                                <input type="checkbox" id="preserveEnglish" checked>
+                                영문 내용 유지
+                            </label>
+                        </div>
+                        <div class="setting-group">
+                            <label>
+                                <input type="checkbox" id="addToNewSheet" checked>
+                                번역본을 새 시트에 추가
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="upload-area">
+                    <div class="upload-zone" id="uploadZone">
+                        <div class="upload-icon">📁</div>
+                        <p>엑셀 파일을 여기에 드래그하거나 클릭하여 선택하세요</p>
+                        <input type="file" id="fileInput" accept=".xlsx,.xls" hidden>
+                        <button id="selectFileBtn" class="select-file-btn">파일 선택</button>
+                    </div>
+                </div>
+
+                <div class="file-info hidden" id="fileInfo">
+                    <h3>파일 정보</h3>
+                    <div class="info-item">
+                        <span class="label">파일명:</span>
+                        <span id="fileName">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">파일 크기:</span>
+                        <span id="fileSize">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="label">시트 수:</span>
+                        <span id="sheetCount">-</span>
+                    </div>
+                </div>
+
+                <div class="excel-preview hidden" id="excelPreview">
+                    <h3>엑셀 미리보기 - 번역 제외할 셀을 클릭하세요</h3>
+                    <div class="preview-controls">
+                        <label>시트 선택: </label>
+                        <select id="sheetSelector"></select>
+                        <button id="clearSelectionBtn" class="clear-btn">선택 초기화</button>
+                        <button id="excludeSheetBtn" class="exclude-sheet-btn">이 시트 전체 제외</button>
+                    </div>
+                    <div class="preview-info">
+                        <span class="info-text">💡 클릭으로 개별 셀 선택 | Shift+클릭으로 범위 선택 | 빨간색 = 제외됨</span>
+                    </div>
+                    <div class="table-container" id="tableContainer">
+                        <!-- Excel table will be rendered here -->
+                    </div>
+                    <div class="excluded-summary">
+                        <h4>제외 항목 요약</h4>
+                        <div id="excludedSummary">없음</div>
+                    </div>
+                </div>
+
+                <div class="translation-controls hidden" id="translationControls">
+                    <button id="translateBtn" class="translate-btn">번역 시작</button>
+                </div>
+
+                <div class="progress-area hidden" id="progressArea">
+                    <div class="progress-info">
+                        <span id="progressText">번역 준비 중...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+
+                <div class="download-area hidden" id="downloadArea">
+                    <h3>번역 완료</h3>
+                    <p>번역이 완료되었습니다. 아래 버튼을 클릭하여 파일을 다운로드하세요.</p>
+                    <button id="downloadBtn" class="download-btn">번역된 파일 다운로드</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="script.js?v=3"></script>
+</body>
+</html>

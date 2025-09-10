@@ -1,0 +1,539 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: #f5f5f5;
+    min-height: 100vh;
+    color: #333;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    color: #1f2937;
+    margin-bottom: 32px;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    font-weight: 700;
+}
+
+header p {
+    font-size: 1.2rem;
+    opacity: 0.9;
+}
+
+main {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    overflow: hidden;
+}
+
+.file-type-selection {
+    padding: 32px;
+    text-align: center;
+}
+
+.file-type-selection h2 {
+    font-size: 1.5rem;
+    margin-bottom: 24px;
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.file-type-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 120px);
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+.file-type-card {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 120px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.file-type-card:not(.disabled):hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+    border-color: #3b82f6;
+}
+
+.file-type-card.selected {
+    border-color: #667eea;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.15);
+}
+
+.file-type-card.disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #f9fafb;
+}
+
+.file-icon {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 10px;
+    object-fit: contain;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.file-type-card h3 {
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+    color: #1f2937;
+    font-weight: 600;
+}
+
+.file-ext {
+    color: #9ca3af;
+    font-size: 0.7rem;
+    margin: 0;
+}
+
+/* Status badges removed - cleaner without them */
+
+.proceed-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    border-radius: 25px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.proceed-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+}
+
+.excel-translator {
+    padding: 40px;
+}
+
+.translator-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.back-btn {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-right: 20px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.back-btn:hover {
+    background: #e9ecef;
+}
+
+.translator-header h2 {
+    font-size: 1.8rem;
+    color: #333;
+}
+
+.translation-options {
+    margin-bottom: 30px;
+}
+
+.option-card {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 25px;
+}
+
+.option-card h3 {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.setting-group {
+    margin-bottom: 15px;
+}
+
+.setting-group label {
+    display: flex;
+    align-items: center;
+    font-size: 1rem;
+    margin-bottom: 8px;
+    cursor: pointer;
+}
+
+.setting-group input[type="radio"],
+.setting-group input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.2);
+}
+
+.upload-area {
+    margin-bottom: 30px;
+}
+
+.upload-zone {
+    border: 2px dashed #dee2e6;
+    border-radius: 12px;
+    padding: 60px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.upload-zone.dragover {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+.upload-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    color: #666;
+}
+
+.upload-zone p {
+    font-size: 1.1rem;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.select-file-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.select-file-btn:hover {
+    background: #5a6fd8;
+}
+
+.file-info {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 20px;
+}
+
+.file-info h3 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.info-item {
+    display: flex;
+    margin-bottom: 8px;
+}
+
+.info-item .label {
+    font-weight: 600;
+    min-width: 80px;
+    color: #666;
+}
+
+.translation-controls {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.translate-btn {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    border-radius: 25px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.translate-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3);
+}
+
+.translate-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.progress-area {
+    margin-bottom: 30px;
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.progress-bar {
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #28a745, #20c997);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.download-area {
+    text-align: center;
+    padding: 30px;
+    background: #f8f9fa;
+    border-radius: 12px;
+}
+
+.download-area h3 {
+    color: #28a745;
+    margin-bottom: 10px;
+}
+
+.download-area p {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.download-btn {
+    background: linear-gradient(135deg, #fd7e14 0%, #e83e8c 100%);
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    border-radius: 25px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.download-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(253, 126, 20, 0.3);
+}
+
+.hidden {
+    display: none;
+}
+
+/* Excel Preview Styles */
+.excel-preview {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 20px;
+}
+
+.excel-preview h3 {
+    color: #333;
+    margin-bottom: 15px;
+}
+
+.preview-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.preview-controls select {
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 0.95rem;
+}
+
+.clear-btn, .exclude-sheet-btn {
+    padding: 8px 16px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.clear-btn:hover {
+    background: #e9ecef;
+}
+
+.exclude-sheet-btn {
+    background: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+
+.exclude-sheet-btn:hover {
+    background: #ffc107;
+    color: white;
+}
+
+.preview-info {
+    background: #d1ecf1;
+    border: 1px solid #bee5eb;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+.info-text {
+    color: #0c5460;
+    font-size: 0.9rem;
+}
+
+.table-container {
+    max-height: 400px;
+    overflow: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background: white;
+    margin-bottom: 15px;
+}
+
+.excel-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.excel-table th {
+    background: #e9ecef;
+    padding: 8px;
+    border: 1px solid #dee2e6;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    font-weight: 600;
+    text-align: center;
+    min-width: 30px;
+}
+
+.excel-table td {
+    padding: 6px 8px;
+    border: 1px solid #dee2e6;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 80px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.excel-table td:hover {
+    background: #f0f4ff;
+}
+
+.excel-table td.excluded {
+    background: #f8d7da !important;
+    color: #721c24;
+    font-weight: 500;
+}
+
+.excel-table td.range-selecting {
+    background: #cfe2ff !important;
+}
+
+.excel-table td.row-header {
+    background: #e9ecef;
+    font-weight: 600;
+    text-align: center;
+    cursor: default;
+    min-width: 40px;
+}
+
+.excluded-summary {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.excluded-summary h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #495057;
+    font-size: 1rem;
+}
+
+#excludedSummary {
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    header h1 {
+        font-size: 2rem;
+    }
+    
+    .file-type-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .excel-translator {
+        padding: 20px;
+    }
+    
+    .translator-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .file-type-grid {
+        grid-template-columns: 1fr;
+    }
+}

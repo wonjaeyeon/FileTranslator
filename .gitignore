@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+
+# PyInstaller
+*.spec
+build/
+dist/
+*.exe
+*.manifest
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+test_*.xlsx
+translated_*.xlsx
+input_*.xlsx
+output_*.xlsx
+
+# Local test files
+test_exclusion.py
+test_excluded.xlsx
+
+# Environment variables
+.env
