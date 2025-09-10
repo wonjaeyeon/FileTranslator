@@ -76,12 +76,13 @@ FileTranslator/
 
 ## 📝 라이선스
 
-MIT License
+본 소프트웨어의 사용을 위해서는 반드시 개발자 원재연의 사전 허락이 필요합니다.
+무단 사용, 복제, 배포, 수정은 엄격히 금지됩니다.
 
 ## 📞 문의
 
-- 이메일: hgyjg@teclast.co.kr
-- 회사: (주)테클라스트코리아
+- 이메일: woncow977@gmail.com
+- 개발자: 원재연
 
 ---
-© 2025 Teclast Korea. All rights reserved.
+© 2025 원재연(Won Jae Yeon). All rights reserved.
