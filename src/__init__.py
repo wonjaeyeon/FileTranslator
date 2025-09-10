@@ -1,0 +1,1 @@
+# FileTranslator v2.0 - 리팩토링된 버전

@@ -16,13 +16,10 @@ echo EXE 파일 생성 중... (3-5분 소요)
 echo.
 
 pyinstaller --onefile ^
-    --name "FileTranslator" ^
+    --name "FileTranslator_v2" ^
     --windowed ^
-    --add-data "index.html;." ^
-    --add-data "style.css;." ^
-    --add-data "script.js;." ^
-    --add-data "excel_translator_template.py;." ^
-    --add-data "translate_server.py;." ^
+    --add-data "src;src" ^
+    --add-data "config;config" ^
     --add-data "icons;icons" ^
     --hidden-import=flask ^
     --hidden-import=flask_cors ^
@@ -30,7 +27,7 @@ pyinstaller --onefile ^
     --hidden-import=googletrans ^
     --hidden-import=deep_translator ^
     --hidden-import=requests ^
-    app.py
+    main.py
 
 echo.
 echo ============================================
