@@ -89,7 +89,7 @@ graph TB
         GoogleAPI[Google Translate API<br/>googletrans]
     end
 
-    subgraph "Data Layer"
+    subgraph "Storage Layer"
         InMemoryJobs[(Job Status Cache<br/>translation_jobs{})]
         TempStorage[(Temporary Storage<br/>tmp/ directory)]
         FileSystem[(File System<br/>input/backup/translated files)]
@@ -131,12 +131,12 @@ graph TB
     classDef clientLayer fill:#e1f5fe
     classDef appLayer fill:#f3e5f5
     classDef serviceLayer fill:#e8f5e8
-    classDef dataLayer fill:#fff3e0
+    classDef storageLayer fill:#fff3e0
 
     class UI,Preview,FileUpload clientLayer
     class Router,FileManager,GPTWorkflow,AutoTranslate,ExcelParser,CellExtractor,FormatPreserver appLayer
     class GPTService,GoogleAPI serviceLayer
-    class InMemoryJobs,TempStorage,FileSystem dataLayer
+    class InMemoryJobs,TempStorage,FileSystem storageLayer
 ```
 
 ## 📊 데이터 플로우
