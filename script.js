@@ -8,6 +8,7 @@ class FileTranslator {
         this.excludedPatterns = new Set();  // 제외할 패턴 목록
         this.rangeStartCell = null;  // 범위 선택 시작 셀
         this.currentSheet = null;  // 현재 선택된 시트
+        this.currentJobId = null;  // 현재 작업 ID (파일 업로드 시 생성)
         this.init();
     }
 
@@ -865,7 +866,7 @@ class FileTranslator {
             formData.append('file', this.currentFile);
             formData.append('direction', this.getDirection());
 
-            const response = await fetch('/extract-words', {
+            const response = await fetch('http://localhost:5001/extract-words', {
                 method: 'POST',
                 body: formData
             });
@@ -873,6 +874,10 @@ class FileTranslator {
             const result = await response.json();
 
             if (result.success) {
+                // job_id 저장
+                this.currentJobId = result.job_id;
+                console.log('Job ID 저장:', this.currentJobId);
+
                 // 결과 표시
                 document.getElementById('wordCount').textContent = result.word_count;
                 document.getElementById('wordList').textContent = result.word_list.join('\n');
@@ -935,8 +940,8 @@ class FileTranslator {
             return;
         }
 
-        if (!this.currentFile) {
-            alert('원본 파일이 없습니다.');
+        if (!this.currentJobId) {
+            alert('먼저 단어 추출을 완료해주세요.');
             return;
         }
 
@@ -944,18 +949,15 @@ class FileTranslator {
             applyBtn.disabled = true;
             applyBtn.textContent = '번역 적용 중...';
 
-            // 파일을 base64로 변환
-            const fileBase64 = await this.fileToBase64(this.currentFile);
-
             const requestData = {
                 gpt_response: gptResponse,
-                original_file: fileBase64,
+                job_id: this.currentJobId,  // 파일 대신 job_id 사용
                 direction: this.getDirection(),
                 preserve_english: document.getElementById('preserveEnglish').checked,
                 add_new_sheet: document.getElementById('addToNewSheet').checked
             };
 
-            const response = await fetch('/process-gpt-translation', {
+            const response = await fetch('http://localhost:5001/process-gpt-translation', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -969,7 +971,7 @@ class FileTranslator {
                 applyBtn.textContent = '번역 적용 완료';
 
                 // 다운로드 영역 표시
-                this.translatedFileUrl = `/download/${result.job_id}/${encodeURIComponent('translated_' + result.job_id + '.xlsx')}`;
+                this.translatedFileUrl = `http://localhost:5001/download/${result.job_id}/${encodeURIComponent('translated_' + result.job_id + '.xlsx')}`;
                 this.translatedFileName = `translated_${this.currentFile.name}`;
 
                 document.getElementById('downloadArea').classList.remove('hidden');

@@ -526,22 +526,40 @@ def extract_words():
         if file.filename == '':
             return jsonify({'error': '파일이 선택되지 않았습니다.'}), 400
 
-        # 파일 저장
+        # 파일 저장 - tmp 디렉토리 생성 및 원본 파일 완전 복사
         import os
         import openpyxl
+        import shutil
 
         unique_id = str(uuid.uuid4())[:8]
+
+        # tmp 디렉토리 생성
+        tmp_dir = os.path.join(os.getcwd(), 'tmp')
+        os.makedirs(tmp_dir, exist_ok=True)
+
         input_filename = f"input_{unique_id}_{file.filename}"
-        input_path = os.path.join(os.getcwd(), input_filename)
+        input_path = os.path.join(tmp_dir, input_filename)
 
         file.save(input_path)
+
+        # 파일 보존을 위해 복사본 생성 (모든 요소 보장)
+        backup_filename = f"backup_{unique_id}_{file.filename}"
+        backup_path = os.path.join(tmp_dir, backup_filename)
+        shutil.copy2(input_path, backup_path)
+
+        print(f"원본 파일 저장: {input_path}")
+        print(f"백업 파일 생성: {backup_path}")
 
         # 엑셀 파일에서 단어 추출
         workbook = openpyxl.load_workbook(input_path)
         word_list = []
 
+        print(f"엑셀 파일 시트 목록: {workbook.sheetnames}")
+
         for sheet_name in workbook.sheetnames:
             sheet = workbook[sheet_name]
+            print(f"시트 '{sheet_name}' 처리 중...")
+
             for row in sheet.iter_rows():
                 for cell in row:
                     if cell.value and isinstance(cell.value, str) and cell.value.strip():
@@ -557,10 +575,9 @@ def extract_words():
                         if needs_translation:
                             cell_address = f"{sheet_name}!{cell.coordinate}"
                             word_list.append(f"<{cell_address}, {cell_text}>")
+                            print(f"  추출: {cell_address} = {cell_text}")
 
-        # 임시 파일 정리
-        if os.path.exists(input_path):
-            os.remove(input_path)
+        # 원본 파일은 제거하지 않고 보존 (백업 파일 유지)
 
         # GPT 프롬프트 생성
         target_lang = "중국어" if direction == 'ko-zh' else "한국어"
@@ -584,7 +601,8 @@ def extract_words():
             'word_count': len(word_list),
             'word_list': word_list,
             'gpt_prompt': gpt_prompt,
-            'job_id': unique_id
+            'job_id': unique_id,
+            'backup_path': backup_path  # 백업 파일 경로 전달
         })
 
     except Exception as e:
@@ -597,87 +615,181 @@ def process_gpt_translation():
     try:
         data = request.json
         gpt_response = data.get('gpt_response', '')
-        original_file = data.get('original_file')  # base64 encoded file
+        job_id = data.get('job_id')  # extract-words에서 받은 job_id 사용
         direction = data.get('direction', 'ko-zh')
         preserve_english = data.get('preserve_english', True)
         add_new_sheet = data.get('add_new_sheet', True)
 
-        if not gpt_response or not original_file:
-            return jsonify({'error': 'GPT 응답과 원본 파일이 필요합니다.'}), 400
+        if not gpt_response or not job_id:
+            return jsonify({'error': 'GPT 응답과 파일 ID가 필요합니다.'}), 400
 
-        # GPT 응답 파싱
+        # GPT 응답 파싱 - 줄바꿈 고려한 개선된 방식
         translation_map = {}
-        lines = gpt_response.strip().split('\n')
 
-        for line in lines:
-            line = line.strip()
-            if ' -> ' in line and line.startswith('<') and '>' in line:
+        print(f"GPT 응답 파싱 시작")
+        print(f"GPT 응답 샘플: {gpt_response[:200]}...")
+
+        # < 로 시작하는 항목들을 찾아서 파싱
+        import re
+
+        # <Sheet1!XXX, 원본텍스트> -> 번역텍스트 패턴 찾기
+        # 줄바꿈이 있어도 처리할 수 있도록 DOTALL 플래그 사용
+        pattern = r'<(Sheet\d*![A-Z]+\d+),\s*([^>]+)>\s*->\s*([^\n<]+)'
+
+        matches = re.findall(pattern, gpt_response, re.DOTALL)
+
+        print(f"정규표현식으로 찾은 매칭: {len(matches)}개")
+
+        for i, (cell_address, original_text, translated_text) in enumerate(matches):
+            # 줄바꿈과 공백 정리
+            original_text = original_text.strip().replace('\n', ' ')
+            translated_text = translated_text.strip()
+
+            translation_map[cell_address] = translated_text
+            print(f"  → 번역 매핑 {i+1}: {cell_address} = '{translated_text}'")
+
+        # 정규표현식이 실패한 경우 기존 방식으로 백업 처리
+        if len(translation_map) == 0:
+            print("정규표현식 파싱 실패, 기존 방식으로 백업 처리")
+            lines = gpt_response.strip().split('\n')
+
+            current_entry = ""
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+
+                # 새로운 항목 시작 (<Sheet로 시작)
+                if line.startswith('<Sheet'):
+                    # 이전 항목 처리
+                    if current_entry and ' -> ' in current_entry:
+                        try:
+                            parts = current_entry.split(' -> ', 1)
+                            left_part = parts[0].strip()
+                            translated_text = parts[1].strip()
+
+                            if left_part.startswith('<') and '>' in left_part:
+                                end_bracket = left_part.find('>')
+                                if end_bracket != -1:
+                                    bracket_content = left_part[1:end_bracket]
+                                    if ', ' in bracket_content:
+                                        cell_address, original_text = bracket_content.split(', ', 1)
+                                        translation_map[cell_address] = translated_text
+                                        print(f"  → 백업 매핑: {cell_address} = {translated_text}")
+                        except Exception as e:
+                            print(f"백업 파싱 오류: {current_entry} - {e}")
+
+                    # 새 항목 시작
+                    current_entry = line
+                else:
+                    # 기존 항목에 추가 (줄바꿈된 내용)
+                    current_entry += " " + line
+
+            # 마지막 항목 처리
+            if current_entry and ' -> ' in current_entry:
                 try:
-                    # <셀주소, 원본텍스트> -> 번역된텍스트 형식 파싱
-                    parts = line.split(' -> ', 1)
+                    parts = current_entry.split(' -> ', 1)
                     left_part = parts[0].strip()
                     translated_text = parts[1].strip()
 
-                    # <셀주소, 원본텍스트> 파싱
-                    if left_part.startswith('<') and left_part.endswith('>'):
-                        inner = left_part[1:-1]
-                        if ', ' in inner:
-                            cell_address, original_text = inner.split(', ', 1)
-                            translation_map[cell_address] = translated_text
+                    if left_part.startswith('<') and '>' in left_part:
+                        end_bracket = left_part.find('>')
+                        if end_bracket != -1:
+                            bracket_content = left_part[1:end_bracket]
+                            if ', ' in bracket_content:
+                                cell_address, original_text = bracket_content.split(', ', 1)
+                                translation_map[cell_address] = translated_text
+                                print(f"  → 백업 매핑 (마지막): {cell_address} = {translated_text}")
                 except Exception as e:
-                    print(f"라인 파싱 오류: {line} - {e}")
-                    continue
+                    print(f"백업 파싱 오류 (마지막): {current_entry} - {e}")
 
         print(f"파싱된 번역 맵: {len(translation_map)}개 항목")
+        for addr, trans in list(translation_map.items())[:5]:  # 처음 5개만 출력
+            print(f"  {addr}: {trans}")
 
-        # 파일 처리
-        import base64
+        # tmp 디렉토리에서 백업 파일 찾기 및 번역 파일 생성
         import openpyxl
         import os
-        from io import BytesIO
+        import shutil
+        import glob
 
-        # base64 디코딩
-        file_data = base64.b64decode(original_file)
+        tmp_dir = os.path.join(os.getcwd(), 'tmp')
 
-        unique_id = str(uuid.uuid4())[:8]
-        input_filename = f"input_{unique_id}.xlsx"
-        output_filename = f"translated_{unique_id}.xlsx"
+        # job_id로 백업 파일 찾기
+        backup_pattern = os.path.join(tmp_dir, f"backup_{job_id}_*.xlsx")
+        backup_files = glob.glob(backup_pattern)
 
-        input_path = os.path.join(os.getcwd(), input_filename)
+        if not backup_files:
+            return jsonify({'error': f'백업 파일을 찾을 수 없습니다. job_id: {job_id}'}), 400
+
+        backup_path = backup_files[0]  # 첫 번째 매칭 파일 사용
+
+        # 출력 파일 생성 (백업 파일을 완전히 복사)
+        output_filename = f"translated_{job_id}.xlsx"
         output_path = os.path.join(os.getcwd(), output_filename)
 
-        # 파일 저장
-        with open(input_path, 'wb') as f:
-            f.write(file_data)
+        shutil.copy2(backup_path, output_path)
+        print(f"백업 파일에서 번역 파일 생성: {backup_path} -> {output_path}")
 
-        # 엑셀 파일 로드 및 번역 적용
-        workbook = openpyxl.load_workbook(input_path)
+        # 복사된 파일에서 번역 적용 - 간단하고 안정적인 방식
+        workbook = openpyxl.load_workbook(output_path)
+        applied_count = 0
 
-        for sheet_name in workbook.sheetnames:
-            sheet = workbook[sheet_name]
+        print(f"번역 적용 시작. 파일 시트: {workbook.sheetnames}")
+        print(f"번역 맵에 있는 주소들: {list(translation_map.keys())[:10]}...")
 
-            # 새 시트 생성 옵션
-            if add_new_sheet:
-                new_sheet_name = f"{sheet_name}_translated"
-                new_sheet = workbook.copy_worksheet(sheet)
-                new_sheet.title = new_sheet_name
-                target_sheet = new_sheet
-            else:
-                target_sheet = sheet
+        # 새 시트 생성 여부 확인
+        if add_new_sheet:
+            # 문제 해결: 원본 시트에 직접 번역 적용 (이미지와 도형 보존)
+            print(f"번역 적용 시작 - 원본 시트에 직접 적용하여 이미지와 도형 보존")
 
-            # 번역 적용
-            for row in target_sheet.iter_rows():
-                for cell in row:
-                    cell_address = f"{sheet_name}!{cell.coordinate}"
-                    if cell_address in translation_map:
-                        cell.value = translation_map[cell_address]
-                        print(f"번역 적용: {cell_address} -> {translation_map[cell_address]}")
+            for sheet_name in workbook.sheetnames:
+                sheet = workbook[sheet_name]
+                sheet_translations = {addr: trans for addr, trans in translation_map.items() if addr.startswith(f"{sheet_name}!")}
 
-        # 번역된 파일 저장
+                if not sheet_translations:
+                    print(f"시트 '{sheet_name}'은 번역 대상 없음, 건너뜀")
+                    continue
+
+                print(f"시트 '{sheet_name}' 처리 중... ({len(sheet_translations)}개 번역 대상)")
+
+                # 이미지 확인
+                if hasattr(sheet, '_images') and sheet._images:
+                    print(f"  시트 '{sheet_name}'에 {len(sheet._images)}개 이미지 있음")
+
+                # 번역 적용 (원본 시트에 직접)
+                for row in sheet.iter_rows():
+                    for cell in row:
+                        cell_address = f"{sheet_name}!{cell.coordinate}"
+                        if cell_address in translation_map:
+                            old_value = cell.value
+                            cell.value = translation_map[cell_address]
+                            applied_count += 1
+                            print(f"번역 적용 {applied_count}: {sheet_name}!{cell.coordinate} '{old_value}' -> '{translation_map[cell_address]}'")
+
+        else:
+            # 원본 시트에 직접 번역 적용
+            for sheet_name in workbook.sheetnames:
+                sheet = workbook[sheet_name]
+                print(f"시트 '{sheet_name}' 직접 번역 중...")
+
+                # 번역 적용
+                for row in sheet.iter_rows():
+                    for cell in row:
+                        cell_address = f"{sheet_name}!{cell.coordinate}"
+                        if cell_address in translation_map:
+                            old_value = cell.value
+                            cell.value = translation_map[cell_address]
+                            applied_count += 1
+                            print(f"번역 적용 {applied_count}: {cell_address} '{old_value}' -> '{translation_map[cell_address]}'")
+
+        print(f"총 {applied_count}개 셀에 번역 적용됨")
+
+        # 수정된 파일 저장
         workbook.save(output_path)
+        print(f"번역된 파일 저장 완료: {output_path}")
 
-        # 작업 정보 저장
-        job_id = unique_id
+        # 작업 정보 저장 (job_id는 이미 정의됨)
         translation_jobs[job_id] = {
             'status': 'completed',
             'progress': 100,
@@ -686,10 +798,6 @@ def process_gpt_translation():
             'original_filename': 'translated_file.xlsx',
             'result_path': output_path
         }
-
-        # 임시 파일 정리
-        if os.path.exists(input_path):
-            os.remove(input_path)
 
         return jsonify({
             'success': True,
