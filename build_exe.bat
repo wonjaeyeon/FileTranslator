@@ -1,76 +1,85 @@
 @echo off
 echo ============================================
-echo    EXE 파일 생성 스크립트
+echo    FileTranslator.exe 빌드 스크립트
+echo    한국어 ↔ 중국어 번역 도구
 echo ============================================
 echo.
 
-:: PyInstaller 설치
-echo PyInstaller 설치 중...
-pip install pyinstaller
+:: Python 설치 확인
+python --version >nul 2>&1
+if %errorlevel% neq 0 (
+    echo [오류] Python이 설치되어 있지 않습니다.
+    echo Python 3.8 이상을 설치해주세요: https://www.python.org/downloads/
+    pause
+    exit /b 1
+)
 
-:: 메인 실행 파일 생성
+:: PyInstaller 설치 확인
+echo [1/4] PyInstaller 확인 중...
+pip show pyinstaller >nul 2>&1
+if %errorlevel% neq 0 (
+    echo PyInstaller 설치 중...
+    pip install pyinstaller
+)
+
+:: 의존성 설치 확인
+echo [2/4] 필요한 패키지 확인 중...
+pip show flask >nul 2>&1
+if %errorlevel% neq 0 (
+    echo 필요한 패키지를 설치합니다...
+    pip install -r requirements.txt
+)
+
+:: 기존 빌드 정리
+echo [3/4] 기존 빌드 파일 정리 중...
+if exist build rmdir /s /q build
+if exist dist rmdir /s /q dist
+if exist *.spec del *.spec
+
+:: EXE 빌드 (모든 파일 포함)
+echo [4/4] EXE 파일 생성 중... (3-5분 소요)
 echo.
-echo 메인 앱 파일 생성 중...
 
-:: app.py 생성 (통합 실행 파일)
-echo import threading > app.py
-echo import time >> app.py
-echo import webbrowser >> app.py
-echo import os >> app.py
-echo import sys >> app.py
-echo from translate_server import app >> app.py
-echo import http.server >> app.py
-echo import socketserver >> app.py
-echo. >> app.py
-echo def run_translation_server(): >> app.py
-echo     app.run(host='0.0.0.0', port=5001, debug=False) >> app.py
-echo. >> app.py
-echo def run_web_server(): >> app.py
-echo     os.chdir(os.path.dirname(os.path.abspath(__file__))) >> app.py
-echo     Handler = http.server.SimpleHTTPRequestHandler >> app.py
-echo     with socketserver.TCPServer(("", 8000), Handler) as httpd: >> app.py
-echo         httpd.serve_forever() >> app.py
-echo. >> app.py
-echo if __name__ == '__main__': >> app.py
-echo     print('파일 번역기 시작 중...') >> app.py
-echo     t1 = threading.Thread(target=run_translation_server) >> app.py
-echo     t1.daemon = True >> app.py
-echo     t1.start() >> app.py
-echo     t2 = threading.Thread(target=run_web_server) >> app.py
-echo     t2.daemon = True >> app.py
-echo     t2.start() >> app.py
-echo     time.sleep(3) >> app.py
-echo     webbrowser.open('http://localhost:8000') >> app.py
-echo     print('브라우저에서 http://localhost:8000 을 열어주세요') >> app.py
-echo     print('종료하려면 Ctrl+C를 누르세요') >> app.py
-echo     try: >> app.py
-echo         while True: >> app.py
-echo             time.sleep(1) >> app.py
-echo     except KeyboardInterrupt: >> app.py
-echo         print('프로그램을 종료합니다...') >> app.py
-echo         sys.exit(0) >> app.py
-
-:: PyInstaller로 빌드
-echo.
-echo EXE 파일 빌드 중... (시간이 걸릴 수 있습니다)
 pyinstaller --onefile ^
     --name "FileTranslator" ^
-    --icon "icons/excel_new.png" ^
+    --windowed ^
     --add-data "index.html;." ^
     --add-data "style.css;." ^
     --add-data "script.js;." ^
     --add-data "excel_translator_template.py;." ^
-    --add-data "icons;icons" ^
-    --hidden-import flask ^
-    --hidden-import flask_cors ^
-    --hidden-import openpyxl ^
-    --hidden-import googletrans ^
-    --hidden-import deep_translator ^
+    --add-data "translate_server.py;." ^
+    --add-data "requirements.txt;." ^
+    --hidden-import=flask ^
+    --hidden-import=flask_cors ^
+    --hidden-import=openpyxl ^
+    --hidden-import=googletrans ^
+    --hidden-import=deep_translator ^
+    --hidden-import=requests ^
+    --hidden-import=werkzeug ^
+    --hidden-import=jinja2 ^
+    --hidden-import=markupsafe ^
+    --hidden-import=itsdangerous ^
+    --hidden-import=click ^
+    --hidden-import=blinker ^
     app.py
 
 echo.
-echo ============================================
-echo    빌드 완료!
-echo    dist/FileTranslator.exe 파일이 생성되었습니다.
-echo ============================================
+if exist dist\FileTranslator.exe (
+    echo ============================================
+    echo    빌드 완료!
+    echo.
+    echo    생성된 파일:
+    echo    dist\FileTranslator.exe
+    echo.
+    echo    이 EXE 파일만 배포하면 됩니다!
+    echo    파일 크기: 
+    for %%F in (dist\FileTranslator.exe) do echo    %%~zF bytes
+    echo ============================================
+) else (
+    echo ============================================
+    echo    빌드 실패!
+    echo    오류를 확인하고 다시 시도해주세요.
+    echo ============================================
+)
+echo.
 pause

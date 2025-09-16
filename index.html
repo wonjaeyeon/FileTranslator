@@ -57,6 +57,19 @@
 
                 <div class="translation-options">
                     <div class="option-card">
+                        <h3>번역 방법 선택</h3>
+                        <div class="setting-group">
+                            <label>
+                                <input type="radio" name="translationMethod" value="gpt" checked>
+                                GPT 번역 (3단계: 추출 → GPT 입력 → 결과 적용)
+                            </label>
+                            <label>
+                                <input type="radio" name="translationMethod" value="auto">
+                                자동 번역 (기존 방식)
+                            </label>
+                        </div>
+                    </div>
+                    <div class="option-card">
                         <h3>번역 설정</h3>
                         <div class="setting-group">
                             <label>
@@ -139,6 +152,41 @@
                     </div>
                     <div class="progress-bar">
                         <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+
+                <div class="gpt-workflow-area hidden" id="gptWorkflowArea">
+                    <h3>GPT 번역 단계</h3>
+
+                    <!-- 1단계: 단어 추출 -->
+                    <div class="workflow-step" id="step1">
+                        <h4>1단계: 번역 대상 단어 추출</h4>
+                        <button id="extractWordsBtn" class="step-btn">단어 추출하기</button>
+                        <div class="step-result hidden" id="step1Result">
+                            <p>추출된 단어 수: <span id="wordCount">0</span>개</p>
+                            <details>
+                                <summary>추출된 단어 목록 보기</summary>
+                                <div id="wordList" class="word-list"></div>
+                            </details>
+                        </div>
+                    </div>
+
+                    <!-- 2단계: GPT 프롬프트 -->
+                    <div class="workflow-step" id="step2">
+                        <h4>2단계: GPT에게 번역 요청</h4>
+                        <p>아래 텍스트를 복사하여 GPT에게 번역을 요청하세요:</p>
+                        <div class="gpt-prompt-container">
+                            <textarea id="gptPrompt" readonly class="gpt-prompt"></textarea>
+                            <button id="copyPromptBtn" class="copy-btn">클립보드에 복사</button>
+                        </div>
+                    </div>
+
+                    <!-- 3단계: GPT 결과 입력 -->
+                    <div class="workflow-step" id="step3">
+                        <h4>3단계: GPT 번역 결과 입력</h4>
+                        <p>GPT의 번역 결과를 아래에 붙여넣으세요:</p>
+                        <textarea id="gptResponse" placeholder="GPT의 번역 결과를 여기에 붙여넣으세요..." class="gpt-response"></textarea>
+                        <button id="applyTranslationBtn" class="step-btn">번역 적용하기</button>
                     </div>
                 </div>
 

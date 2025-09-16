@@ -28,7 +28,7 @@ pip install -r requirements.txt
 python app.py
 
 # 또는 개별 실행
-python translate-server.py  # 터미널 1
+python translate_server.py  # 터미널 1
 python -m http.server 8000  # 터미널 2
 ```
 

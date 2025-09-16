@@ -46,6 +46,127 @@ main {
     text-align: center;
 }
 
+/* GPT Workflow Styles */
+.gpt-workflow-area {
+    padding: 24px;
+    background: #f8f9fa;
+    border-top: 1px solid #e5e5e5;
+}
+
+.gpt-workflow-area h3 {
+    margin-bottom: 24px;
+    color: #1f2937;
+    font-size: 1.5rem;
+}
+
+.workflow-step {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.workflow-step h4 {
+    color: #374151;
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+}
+
+.step-btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s;
+}
+
+.step-btn:hover {
+    background: #2563eb;
+}
+
+.step-btn:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+.step-result {
+    margin-top: 16px;
+    padding: 16px;
+    background: #f0f9ff;
+    border-radius: 8px;
+    border: 1px solid #bae6fd;
+}
+
+.word-list {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-top: 8px;
+    padding: 8px;
+    background: #f9f9f9;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    white-space: pre-wrap;
+}
+
+.gpt-prompt-container {
+    position: relative;
+    margin-top: 12px;
+}
+
+.gpt-prompt {
+    width: 100%;
+    height: 300px;
+    padding: 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    background: #f9f9f9;
+    resize: vertical;
+}
+
+.copy-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #10b981;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background-color 0.2s;
+}
+
+.copy-btn:hover {
+    background: #059669;
+}
+
+.gpt-response {
+    width: 100%;
+    height: 200px;
+    padding: 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 0.9rem;
+    margin-top: 12px;
+    margin-bottom: 16px;
+    resize: vertical;
+}
+
+.gpt-response:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
 .file-type-selection h2 {
     font-size: 1.5rem;
     margin-bottom: 24px;

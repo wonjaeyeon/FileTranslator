@@ -24,7 +24,7 @@ if %errorlevel% neq 0 (
 
 :: 번역 서버 시작
 echo [2/3] 번역 서버 시작 중...
-start /B python translate-server.py
+start /B python translate_server.py
 
 :: 3초 대기
 timeout /t 3 /nobreak >nul

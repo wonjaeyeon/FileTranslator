@@ -513,48 +513,237 @@ def run_translation(job_id, input_path, output_path, direction, preserve_english
         translation_jobs[job_id]['error'] = str(e)
         print(f"번역 오류 (Job {job_id}): {e}")
 
+@app.route('/extract-words', methods=['POST'])
+def extract_words():
+    """엑셀 파일에서 번역 대상 단어들을 추출하여 <CELL, 단어> 형태로 반환"""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': '파일이 업로드되지 않았습니다.'}), 400
+
+        file = request.files['file']
+        direction = request.form.get('direction', 'ko-zh')
+
+        if file.filename == '':
+            return jsonify({'error': '파일이 선택되지 않았습니다.'}), 400
+
+        # 파일 저장
+        import os
+        import openpyxl
+
+        unique_id = str(uuid.uuid4())[:8]
+        input_filename = f"input_{unique_id}_{file.filename}"
+        input_path = os.path.join(os.getcwd(), input_filename)
+
+        file.save(input_path)
+
+        # 엑셀 파일에서 단어 추출
+        workbook = openpyxl.load_workbook(input_path)
+        word_list = []
+
+        for sheet_name in workbook.sheetnames:
+            sheet = workbook[sheet_name]
+            for row in sheet.iter_rows():
+                for cell in row:
+                    if cell.value and isinstance(cell.value, str) and cell.value.strip():
+                        cell_text = str(cell.value).strip()
+
+                        # 번역이 필요한 텍스트인지 확인
+                        needs_translation = False
+                        if direction == 'ko-zh' and is_korean(cell_text):
+                            needs_translation = True
+                        elif direction == 'zh-ko' and is_chinese(cell_text):
+                            needs_translation = True
+
+                        if needs_translation:
+                            cell_address = f"{sheet_name}!{cell.coordinate}"
+                            word_list.append(f"<{cell_address}, {cell_text}>")
+
+        # 임시 파일 정리
+        if os.path.exists(input_path):
+            os.remove(input_path)
+
+        # GPT 프롬프트 생성
+        target_lang = "중국어" if direction == 'ko-zh' else "한국어"
+        source_lang = "한국어" if direction == 'ko-zh' else "중국어"
+
+        gpt_prompt = f"""다음은 엑셀 파일에서 추출한 {source_lang} 텍스트들입니다. 각 텍스트를 {target_lang}로 번역해주세요. 영어는 그대로 유지해주세요.
+
+번역할 텍스트 목록:
+{chr(10).join(word_list)}
+
+답변 형식:
+각 줄마다 다음 형식으로 답변해주세요:
+<셀주소, 원본텍스트> -> 번역된텍스트
+
+예시:
+<Sheet1!A1, 안녕하세요> -> 你好
+<Sheet1!B2, 프로젝트 관리> -> 项目管理"""
+
+        return jsonify({
+            'success': True,
+            'word_count': len(word_list),
+            'word_list': word_list,
+            'gpt_prompt': gpt_prompt,
+            'job_id': unique_id
+        })
+
+    except Exception as e:
+        print(f"단어 추출 오류: {e}")
+        return jsonify({'error': f'단어 추출 중 오류가 발생했습니다: {str(e)}'}), 500
+
+@app.route('/process-gpt-translation', methods=['POST'])
+def process_gpt_translation():
+    """GPT 번역 결과를 받아서 엑셀 파일 번역 수행"""
+    try:
+        data = request.json
+        gpt_response = data.get('gpt_response', '')
+        original_file = data.get('original_file')  # base64 encoded file
+        direction = data.get('direction', 'ko-zh')
+        preserve_english = data.get('preserve_english', True)
+        add_new_sheet = data.get('add_new_sheet', True)
+
+        if not gpt_response or not original_file:
+            return jsonify({'error': 'GPT 응답과 원본 파일이 필요합니다.'}), 400
+
+        # GPT 응답 파싱
+        translation_map = {}
+        lines = gpt_response.strip().split('\n')
+
+        for line in lines:
+            line = line.strip()
+            if ' -> ' in line and line.startswith('<') and '>' in line:
+                try:
+                    # <셀주소, 원본텍스트> -> 번역된텍스트 형식 파싱
+                    parts = line.split(' -> ', 1)
+                    left_part = parts[0].strip()
+                    translated_text = parts[1].strip()
+
+                    # <셀주소, 원본텍스트> 파싱
+                    if left_part.startswith('<') and left_part.endswith('>'):
+                        inner = left_part[1:-1]
+                        if ', ' in inner:
+                            cell_address, original_text = inner.split(', ', 1)
+                            translation_map[cell_address] = translated_text
+                except Exception as e:
+                    print(f"라인 파싱 오류: {line} - {e}")
+                    continue
+
+        print(f"파싱된 번역 맵: {len(translation_map)}개 항목")
+
+        # 파일 처리
+        import base64
+        import openpyxl
+        import os
+        from io import BytesIO
+
+        # base64 디코딩
+        file_data = base64.b64decode(original_file)
+
+        unique_id = str(uuid.uuid4())[:8]
+        input_filename = f"input_{unique_id}.xlsx"
+        output_filename = f"translated_{unique_id}.xlsx"
+
+        input_path = os.path.join(os.getcwd(), input_filename)
+        output_path = os.path.join(os.getcwd(), output_filename)
+
+        # 파일 저장
+        with open(input_path, 'wb') as f:
+            f.write(file_data)
+
+        # 엑셀 파일 로드 및 번역 적용
+        workbook = openpyxl.load_workbook(input_path)
+
+        for sheet_name in workbook.sheetnames:
+            sheet = workbook[sheet_name]
+
+            # 새 시트 생성 옵션
+            if add_new_sheet:
+                new_sheet_name = f"{sheet_name}_translated"
+                new_sheet = workbook.copy_worksheet(sheet)
+                new_sheet.title = new_sheet_name
+                target_sheet = new_sheet
+            else:
+                target_sheet = sheet
+
+            # 번역 적용
+            for row in target_sheet.iter_rows():
+                for cell in row:
+                    cell_address = f"{sheet_name}!{cell.coordinate}"
+                    if cell_address in translation_map:
+                        cell.value = translation_map[cell_address]
+                        print(f"번역 적용: {cell_address} -> {translation_map[cell_address]}")
+
+        # 번역된 파일 저장
+        workbook.save(output_path)
+
+        # 작업 정보 저장
+        job_id = unique_id
+        translation_jobs[job_id] = {
+            'status': 'completed',
+            'progress': 100,
+            'message': 'GPT 번역 완료',
+            'output_filename': output_filename,
+            'original_filename': 'translated_file.xlsx',
+            'result_path': output_path
+        }
+
+        # 임시 파일 정리
+        if os.path.exists(input_path):
+            os.remove(input_path)
+
+        return jsonify({
+            'success': True,
+            'job_id': job_id,
+            'message': 'GPT 번역이 완료되었습니다.',
+            'translations_applied': len(translation_map)
+        })
+
+    except Exception as e:
+        print(f"GPT 번역 처리 오류: {e}")
+        return jsonify({'error': f'GPT 번역 처리 중 오류가 발생했습니다: {str(e)}'}), 500
+
 @app.route('/translate-excel', methods=['POST'])
 def translate_excel():
     try:
         if 'file' not in request.files:
             return jsonify({'error': '파일이 업로드되지 않았습니다.'}), 400
-        
+
         file = request.files['file']
         direction = request.form.get('direction', 'ko-zh')
         preserve_english = request.form.get('preserve_english', 'true').lower() == 'true'
         add_new_sheet = request.form.get('add_new_sheet', 'true').lower() == 'true'
-        
+
         # 번역 제외 설정 파싱
         exclude_sheets_str = request.form.get('exclude_sheets', '')
         exclude_cells_str = request.form.get('exclude_cells', '')
         exclude_patterns_str = request.form.get('exclude_patterns', '')
-        
+
         exclude_sheets = [s.strip() for s in exclude_sheets_str.split(',') if s.strip()] if exclude_sheets_str else None
         exclude_cells = [c.strip() for c in exclude_cells_str.split(',') if c.strip()] if exclude_cells_str else None
         exclude_patterns = [p.strip() for p in exclude_patterns_str.split(',') if p.strip()] if exclude_patterns_str else None
-        
+
         if exclude_cells:
             print(f"제외할 셀: {len(exclude_cells)}개")
         if exclude_sheets:
             print(f"제외할 시트: {exclude_sheets}")
         if exclude_patterns:
             print(f"제외할 패턴: {exclude_patterns}")
-        
+
         if file.filename == '':
             return jsonify({'error': '파일이 선택되지 않았습니다.'}), 400
-        
+
         # 파일 저장
         import os
-        
+
         unique_id = str(uuid.uuid4())[:8]
         input_filename = f"input_{unique_id}_{file.filename}"
         output_filename = f"translated_{unique_id}_{file.filename}"
-        
+
         input_path = os.path.join(os.getcwd(), input_filename)
         output_path = os.path.join(os.getcwd(), output_filename)
-        
+
         file.save(input_path)
-        
+
         # 번역 작업 정보 저장
         job_id = unique_id
         translation_jobs[job_id] = {
@@ -564,7 +753,7 @@ def translate_excel():
             'output_filename': output_filename,
             'original_filename': file.filename
         }
-        
+
         # 백그라운드에서 번역 실행
         thread = threading.Thread(
             target=run_translation,
@@ -572,13 +761,13 @@ def translate_excel():
         )
         thread.daemon = True
         thread.start()
-        
+
         return jsonify({
             'success': True,
             'job_id': job_id,
             'message': '번역이 시작되었습니다.'
         })
-        
+
     except Exception as e:
         print(f"엑셀 번역 오류: {e}")
         return jsonify({'error': f'번역 중 오류가 발생했습니다: {str(e)}'}), 500

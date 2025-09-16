@@ -48,6 +48,27 @@ class FileTranslator {
         selectFileBtn.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', (e) => this.handleFileSelect(e.target.files[0]));
         translateBtn.addEventListener('click', () => this.startTranslation());
+
+        // GPT Workflow event listeners
+        const extractWordsBtn = document.getElementById('extractWordsBtn');
+        const copyPromptBtn = document.getElementById('copyPromptBtn');
+        const applyTranslationBtn = document.getElementById('applyTranslationBtn');
+
+        if (extractWordsBtn) {
+            extractWordsBtn.addEventListener('click', () => this.extractWords());
+        }
+        if (copyPromptBtn) {
+            copyPromptBtn.addEventListener('click', () => this.copyPromptToClipboard());
+        }
+        if (applyTranslationBtn) {
+            applyTranslationBtn.addEventListener('click', () => this.applyGptTranslation());
+        }
+
+        // Translation method change listener
+        const translationMethodRadios = document.querySelectorAll('input[name="translationMethod"]');
+        translationMethodRadios.forEach(radio => {
+            radio.addEventListener('change', () => this.onTranslationMethodChange());
+        });
         downloadBtn.addEventListener('click', () => this.downloadTranslatedFile());
 
         uploadZone.addEventListener('dragover', (e) => {
@@ -113,6 +134,7 @@ class FileTranslator {
             
             this.displayFileInfo(file);
             this.showTranslationControls();
+            this.onTranslationMethodChange(); // 초기 번역 방법에 따른 UI 설정
         } catch (error) {
             console.error('파일 읽기 오류:', error);
             alert('파일을 읽는 중 오류가 발생했습니다.');
@@ -802,11 +824,185 @@ class FileTranslator {
             const originalName = this.currentFile.name.replace(/\.[^/.]+$/, "");
             const suffix = direction === 'ko-to-zh' ? '_중문번역' : '_한국어번역';
             const fileName = `${originalName}${suffix}.xlsx`;
-            
+
             XLSX.writeFile(this.translatedWorkbook, fileName);
         } else {
             alert('번역된 파일이 없습니다.');
         }
+    }
+
+    // GPT Workflow Methods
+    onTranslationMethodChange() {
+        const method = document.querySelector('input[name="translationMethod"]:checked').value;
+        const gptWorkflowArea = document.getElementById('gptWorkflowArea');
+        const translationControls = document.getElementById('translationControls');
+
+        if (method === 'gpt') {
+            // GPT 워크플로우 표시
+            gptWorkflowArea.classList.remove('hidden');
+            translationControls.classList.add('hidden');
+        } else {
+            // 기존 자동 번역 방식
+            gptWorkflowArea.classList.add('hidden');
+            translationControls.classList.remove('hidden');
+        }
+    }
+
+    async extractWords() {
+        if (!this.currentFile) {
+            alert('먼저 파일을 선택해주세요.');
+            return;
+        }
+
+        const extractWordsBtn = document.getElementById('extractWordsBtn');
+        const step1Result = document.getElementById('step1Result');
+
+        try {
+            extractWordsBtn.disabled = true;
+            extractWordsBtn.textContent = '단어 추출 중...';
+
+            const formData = new FormData();
+            formData.append('file', this.currentFile);
+            formData.append('direction', this.getDirection());
+
+            const response = await fetch('/extract-words', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // 결과 표시
+                document.getElementById('wordCount').textContent = result.word_count;
+                document.getElementById('wordList').textContent = result.word_list.join('\n');
+                document.getElementById('gptPrompt').value = result.gpt_prompt;
+
+                step1Result.classList.remove('hidden');
+
+                // 2단계 활성화
+                document.getElementById('step2').style.opacity = '1';
+                document.getElementById('copyPromptBtn').disabled = false;
+
+                // 추출 결과 저장
+                this.extractedWords = result.word_list;
+                this.gptPrompt = result.gpt_prompt;
+
+                extractWordsBtn.textContent = '단어 추출 완료';
+            } else {
+                alert(`단어 추출 실패: ${result.error}`);
+                extractWordsBtn.disabled = false;
+                extractWordsBtn.textContent = '단어 추출하기';
+            }
+        } catch (error) {
+            console.error('단어 추출 오류:', error);
+            alert('단어 추출 중 오류가 발생했습니다.');
+            extractWordsBtn.disabled = false;
+            extractWordsBtn.textContent = '단어 추출하기';
+        }
+    }
+
+    async copyPromptToClipboard() {
+        const gptPrompt = document.getElementById('gptPrompt');
+        const copyBtn = document.getElementById('copyPromptBtn');
+
+        try {
+            await navigator.clipboard.writeText(gptPrompt.value);
+            const originalText = copyBtn.textContent;
+            copyBtn.textContent = '복사됨!';
+            copyBtn.style.background = '#059669';
+
+            // 3단계 활성화
+            document.getElementById('step3').style.opacity = '1';
+            document.getElementById('applyTranslationBtn').disabled = false;
+
+            setTimeout(() => {
+                copyBtn.textContent = originalText;
+                copyBtn.style.background = '#10b981';
+            }, 2000);
+        } catch (error) {
+            console.error('클립보드 복사 실패:', error);
+            alert('클립보드 복사에 실패했습니다.');
+        }
+    }
+
+    async applyGptTranslation() {
+        const gptResponse = document.getElementById('gptResponse').value.trim();
+        const applyBtn = document.getElementById('applyTranslationBtn');
+
+        if (!gptResponse) {
+            alert('GPT 번역 결과를 입력해주세요.');
+            return;
+        }
+
+        if (!this.currentFile) {
+            alert('원본 파일이 없습니다.');
+            return;
+        }
+
+        try {
+            applyBtn.disabled = true;
+            applyBtn.textContent = '번역 적용 중...';
+
+            // 파일을 base64로 변환
+            const fileBase64 = await this.fileToBase64(this.currentFile);
+
+            const requestData = {
+                gpt_response: gptResponse,
+                original_file: fileBase64,
+                direction: this.getDirection(),
+                preserve_english: document.getElementById('preserveEnglish').checked,
+                add_new_sheet: document.getElementById('addToNewSheet').checked
+            };
+
+            const response = await fetch('/process-gpt-translation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                applyBtn.textContent = '번역 적용 완료';
+
+                // 다운로드 영역 표시
+                this.translatedFileUrl = `/download/${result.job_id}/${encodeURIComponent('translated_' + result.job_id + '.xlsx')}`;
+                this.translatedFileName = `translated_${this.currentFile.name}`;
+
+                document.getElementById('downloadArea').classList.remove('hidden');
+                alert(`번역이 완료되었습니다! ${result.translations_applied}개 항목이 번역되었습니다.`);
+            } else {
+                alert(`번역 적용 실패: ${result.error}`);
+                applyBtn.disabled = false;
+                applyBtn.textContent = '번역 적용하기';
+            }
+        } catch (error) {
+            console.error('번역 적용 오류:', error);
+            alert('번역 적용 중 오류가 발생했습니다.');
+            applyBtn.disabled = false;
+            applyBtn.textContent = '번역 적용하기';
+        }
+    }
+
+    fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                // "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," 부분 제거
+                const base64 = reader.result.split(',')[1];
+                resolve(base64);
+            };
+            reader.onerror = error => reject(error);
+        });
+    }
+
+    getDirection() {
+        const direction = document.querySelector('input[name="direction"]:checked').value;
+        return direction === 'ko-to-zh' ? 'ko-zh' : 'zh-ko';
     }
 }
 
