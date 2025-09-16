@@ -90,8 +90,9 @@ graph TB
     end
 
     subgraph "Data Layer"
-        TempFiles[(Temporary Files<br/>tmp/*.xlsx)]
-        JobCache[(Job Cache<br/>In-Memory)]
+        InMemoryJobs[(Job Status Cache<br/>translation_jobs{})]
+        TempStorage[(Temporary Storage<br/>tmp/ directory)]
+        FileSystem[(File System<br/>input/backup/translated files)]
     end
 
     %% Client Flow
@@ -101,14 +102,15 @@ graph TB
 
     %% Server Internal Flow
     Router --> FileManager
-    FileManager --> TempFiles
+    FileManager --> TempStorage
+    FileManager --> FileSystem
 
     %% GPT Workflow
     Router --> GPTWorkflow
     GPTWorkflow --> ExcelParser
     GPTWorkflow --> CellExtractor
     ExcelParser --> FormatPreserver
-    GPTWorkflow --> JobCache
+    GPTWorkflow --> InMemoryJobs
 
     %% Auto Translation Flow
     Router --> AutoTranslate
@@ -134,7 +136,7 @@ graph TB
     class UI,Preview,FileUpload clientLayer
     class Router,FileManager,GPTWorkflow,AutoTranslate,ExcelParser,CellExtractor,FormatPreserver appLayer
     class GPTService,GoogleAPI serviceLayer
-    class TempFiles,JobCache dataLayer
+    class InMemoryJobs,TempStorage,FileSystem dataLayer
 ```
 
 ## 📊 데이터 플로우
