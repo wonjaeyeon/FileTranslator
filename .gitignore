@@ -30,13 +30,33 @@ dist/
 *.temp
 *.log
 test_*.xlsx
+test_*.xls
+test_*.txt
+test_*.py
 translated_*.xlsx
+translated_*.xls
 input_*.xlsx
+input_*.xls
 output_*.xlsx
+output_*.xls
+
+# Sample files
+sample-*.xlsx
+sample-*.xls
+sample_*.xlsx
+sample_*.xls
 
 # Local test files
 test_exclusion.py
 test_excluded.xlsx
+
+# Temporary working directory
+tmp/
+
+# Personal/private files (Korean file names)
+*발주서*
+*에스씨에스프로*
+*TECLAST_KOREA*
 
 # Environment variables
 .env
