@@ -58,6 +58,103 @@ python -m http.server 8000  # 터미널 2
 5. **번역 실행**: "번역 시작" 버튼 클릭
 6. **다운로드**: 번역 완료 후 파일 다운로드
 
+## 🏗️ 시스템 아키텍처
+
+```mermaid
+graph TB
+    subgraph "Client Layer (Browser)"
+        UI[Web Interface<br/>HTML5/CSS3/JS]
+        Preview[Excel Preview<br/>XLSX.js]
+        FileUpload[File Upload<br/>Base64 Encoding]
+    end
+
+    subgraph "Application Layer (Flask Server)"
+        Router[Flask Router<br/>CORS Handler]
+        FileManager[File Manager<br/>tmp/ Directory]
+
+        subgraph "Translation Services"
+            GPTWorkflow[GPT Workflow Service<br/>/extract-words<br/>/process-gpt-translation]
+            AutoTranslate[Auto Translation Service<br/>/translate]
+        end
+
+        subgraph "Excel Processing"
+            ExcelParser[Excel Parser<br/>openpyxl]
+            CellExtractor[Cell Text Extractor]
+            FormatPreserver[Format Preserver<br/>Images/Shapes/Styles]
+        end
+    end
+
+    subgraph "External Services"
+        GPTService[GPT Service<br/>User Interaction]
+        GoogleAPI[Google Translate API<br/>googletrans]
+    end
+
+    subgraph "Data Layer"
+        TempFiles[(Temporary Files<br/>tmp/*.xlsx)]
+        JobCache[(Job Cache<br/>In-Memory)]
+    end
+
+    %% Client Flow
+    UI --> FileUpload
+    FileUpload --> Router
+    Preview --> UI
+
+    %% Server Internal Flow
+    Router --> FileManager
+    FileManager --> TempFiles
+
+    %% GPT Workflow
+    Router --> GPTWorkflow
+    GPTWorkflow --> ExcelParser
+    GPTWorkflow --> CellExtractor
+    ExcelParser --> FormatPreserver
+    GPTWorkflow --> JobCache
+
+    %% Auto Translation Flow
+    Router --> AutoTranslate
+    AutoTranslate --> ExcelParser
+    AutoTranslate --> GoogleAPI
+    AutoTranslate --> FormatPreserver
+
+    %% External Integration
+    GPTWorkflow -.-> GPTService
+    AutoTranslate --> GoogleAPI
+
+    %% Response Flow
+    FormatPreserver --> FileManager
+    FileManager --> Router
+    Router --> UI
+
+    %% Styling
+    classDef clientLayer fill:#e1f5fe
+    classDef appLayer fill:#f3e5f5
+    classDef serviceLayer fill:#e8f5e8
+    classDef dataLayer fill:#fff3e0
+
+    class UI,Preview,FileUpload clientLayer
+    class Router,FileManager,GPTWorkflow,AutoTranslate,ExcelParser,CellExtractor,FormatPreserver appLayer
+    class GPTService,GoogleAPI serviceLayer
+    class TempFiles,JobCache dataLayer
+```
+
+## 📊 데이터 플로우
+
+### GPT 번역 워크플로우
+```
+1. File Upload → Base64 Encoding → Flask Server
+2. Excel Parse → Cell Text Extraction → <CELL, TEXT> Format
+3. GPT Prompt Generation → User GPT Interaction
+4. GPT Response → Response Parsing → Translation Map
+5. Translation Application → Format Preservation → File Download
+```
+
+### 자동 번역 플로우
+```
+1. File Upload → Excel Parse → Cell Detection
+2. Text Filtering → Google Translate API → Translation
+3. Cell Mapping → Format Preservation → File Download
+```
+
 ## 🛠 기술 스택
 
 - **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
