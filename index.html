@@ -158,6 +158,30 @@
                 <div class="gpt-workflow-area hidden" id="gptWorkflowArea">
                     <h3>GPT 번역 단계</h3>
 
+                    <!-- 시트 복사 안내 -->
+                    <div class="sheet-copy-guide">
+                        <div class="guide-header">
+                            <h4>📋 시트 복사 안내 (권장)</h4>
+                        </div>
+                        <div class="guide-content">
+                            <p><strong>이미지와 도형을 완벽히 보존하려면:</strong></p>
+                            <ol>
+                                <li>Excel에서 원본 시트를 <strong>우클릭 → 복사</strong></li>
+                                <li>복사된 시트 이름을 다음 중 하나로 변경:
+                                    <ul>
+                                        <li><code>원본시트명_중문</code> (예: Sheet1_중문)</li>
+                                        <li><code>원본시트명_translated</code> (예: Sheet1_translated)</li>
+                                        <li><code>원본시트명_chinese</code> (예: Sheet1_chinese)</li>
+                                    </ul>
+                                </li>
+                                <li>번역 진행하면 복사된 시트에만 번역이 적용됩니다</li>
+                            </ol>
+                            <div class="guide-note">
+                                <p>💡 <strong>복사하지 않으면?</strong> 원본 시트에 직접 번역이 적용됩니다.</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- 1단계: 단어 추출 -->
                     <div class="workflow-step" id="step1">
                         <h4>1단계: 번역 대상 단어 추출</h4>

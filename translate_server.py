@@ -738,34 +738,86 @@ def process_gpt_translation():
         print(f"번역 적용 시작. 파일 시트: {workbook.sheetnames}")
         print(f"번역 맵에 있는 주소들: {list(translation_map.keys())[:10]}...")
 
-        # 새 시트 생성 여부 확인
-        if add_new_sheet:
-            # 문제 해결: 원본 시트에 직접 번역 적용 (이미지와 도형 보존)
-            print(f"번역 적용 시작 - 원본 시트에 직접 적용하여 이미지와 도형 보존")
+        def find_translated_sheets(workbook):
+            """복사된 번역 시트들을 찾는 함수"""
+            translated_sheet_suffixes = ['_중문', '_translated', '_chinese', '_번역', '_zh', '_cn']
+            translated_sheets = {}
 
             for sheet_name in workbook.sheetnames:
-                sheet = workbook[sheet_name]
-                sheet_translations = {addr: trans for addr, trans in translation_map.items() if addr.startswith(f"{sheet_name}!")}
+                for suffix in translated_sheet_suffixes:
+                    if sheet_name.lower().endswith(suffix.lower()):
+                        # 원본 시트명 추정
+                        original_name = sheet_name[:-len(suffix)]
+                        if original_name in workbook.sheetnames:
+                            translated_sheets[original_name] = sheet_name
+                            print(f"발견: '{original_name}' -> '{sheet_name}' (번역 시트)")
+                        break
 
-                if not sheet_translations:
-                    print(f"시트 '{sheet_name}'은 번역 대상 없음, 건너뜀")
-                    continue
+            return translated_sheets
 
-                print(f"시트 '{sheet_name}' 처리 중... ({len(sheet_translations)}개 번역 대상)")
+        # 새 시트 생성 여부 확인
+        if add_new_sheet:
+            # 복사된 번역 시트 찾기
+            translated_sheets = find_translated_sheets(workbook)
 
-                # 이미지 확인
-                if hasattr(sheet, '_images') and sheet._images:
-                    print(f"  시트 '{sheet_name}'에 {len(sheet._images)}개 이미지 있음")
+            if translated_sheets:
+                print(f"복사된 번역 시트 발견: {len(translated_sheets)}개")
+                print("번역 적용 시작 - 복사된 시트에만 번역 적용하여 원본 보존")
 
-                # 번역 적용 (원본 시트에 직접)
-                for row in sheet.iter_rows():
-                    for cell in row:
-                        cell_address = f"{sheet_name}!{cell.coordinate}"
-                        if cell_address in translation_map:
-                            old_value = cell.value
-                            cell.value = translation_map[cell_address]
-                            applied_count += 1
-                            print(f"번역 적용 {applied_count}: {sheet_name}!{cell.coordinate} '{old_value}' -> '{translation_map[cell_address]}'")
+                for original_sheet, translated_sheet in translated_sheets.items():
+                    print(f"처리 중: '{original_sheet}' -> '{translated_sheet}'")
+
+                    # 해당 원본 시트의 번역 데이터만 필터링
+                    sheet_translations = {addr: trans for addr, trans in translation_map.items()
+                                        if addr.startswith(f"{original_sheet}!")}
+
+                    if not sheet_translations:
+                        print(f"  시트 '{original_sheet}' 번역 대상 없음")
+                        continue
+
+                    # 번역 시트에 적용
+                    target_sheet = workbook[translated_sheet]
+                    sheet_applied_count = 0
+
+                    for row in target_sheet.iter_rows():
+                        for cell in row:
+                            # 원본 시트 기준으로 셀 주소 생성
+                            cell_address = f"{original_sheet}!{cell.coordinate}"
+                            if cell_address in translation_map:
+                                old_value = cell.value
+                                cell.value = translation_map[cell_address]
+                                applied_count += 1
+                                sheet_applied_count += 1
+                                print(f"  번역 적용: {cell.coordinate} '{old_value}' -> '{translation_map[cell_address]}'")
+
+                    print(f"  '{translated_sheet}' 완료: {sheet_applied_count}개 셀 번역")
+
+                print(f"총 {applied_count}개 셀이 번역되었습니다.")
+
+            else:
+                print("복사된 번역 시트를 찾을 수 없습니다.")
+                print("💡 사용법: 원본 시트를 복사하고 이름 끝에 '_중문', '_translated', '_chinese' 등을 추가하세요.")
+                print("예시: 'Sheet1' -> 'Sheet1_중문' 또는 'Sheet1_translated'")
+                print("원본 시트에 직접 번역을 적용합니다.")
+
+                # 원본 시트에 직접 적용 (기존 로직)
+                for sheet_name in workbook.sheetnames:
+                    sheet = workbook[sheet_name]
+                    sheet_translations = {addr: trans for addr, trans in translation_map.items() if addr.startswith(f"{sheet_name}!")}
+
+                    if not sheet_translations:
+                        continue
+
+                    print(f"시트 '{sheet_name}' 처리 중... ({len(sheet_translations)}개 번역 대상)")
+
+                    for row in sheet.iter_rows():
+                        for cell in row:
+                            cell_address = f"{sheet_name}!{cell.coordinate}"
+                            if cell_address in translation_map:
+                                old_value = cell.value
+                                cell.value = translation_map[cell_address]
+                                applied_count += 1
+                                print(f"번역 적용 {applied_count}: {sheet_name}!{cell.coordinate} '{old_value}' -> '{translation_map[cell_address]}'")
 
         else:
             # 원본 시트에 직접 번역 적용

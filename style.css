@@ -59,6 +59,74 @@ main {
     font-size: 1.5rem;
 }
 
+/* 시트 복사 안내 스타일 */
+.sheet-copy-guide {
+    margin-bottom: 25px;
+    padding: 20px;
+    background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+    border-radius: 12px;
+    border: 2px solid #2196F3;
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.1);
+}
+
+.guide-header h4 {
+    margin: 0 0 15px 0;
+    color: #1976D2;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.guide-content p {
+    margin: 0 0 12px 0;
+    color: #333;
+    font-weight: 500;
+}
+
+.guide-content ol {
+    margin: 12px 0;
+    padding-left: 20px;
+    color: #444;
+}
+
+.guide-content ol li {
+    margin-bottom: 8px;
+    line-height: 1.5;
+}
+
+.guide-content ul {
+    margin: 8px 0;
+    padding-left: 20px;
+}
+
+.guide-content ul li {
+    margin-bottom: 4px;
+    list-style-type: disc;
+}
+
+.guide-content code {
+    background: #fff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    color: #d73a49;
+    border: 1px solid #e1e4e8;
+}
+
+.guide-note {
+    margin-top: 15px;
+    padding: 12px;
+    background: rgba(255, 235, 59, 0.2);
+    border-left: 4px solid #FFC107;
+    border-radius: 6px;
+}
+
+.guide-note p {
+    margin: 0;
+    color: #bf6900;
+    font-size: 14px;
+}
+
 .workflow-step {
     background: white;
     border-radius: 12px;
